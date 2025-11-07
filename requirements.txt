@@ -1,20 +1,6 @@
-# Essential dependencies for Render deployment
-# Using versions with pre-built wheels to avoid compilation issues
-
+# Minimal working dependencies for Render
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
-pydantic==2.9.2
-pydantic-settings==2.6.1
-python-multipart==0.0.6
-
-# Database
-motor==3.6.0
-pymongo==4.10.1
-
-# HTTP & Async
-aiohttp==3.11.10
-aiofiles==24.1.0
-
-# Utilities
-python-dotenv==1.0.1
-loguru==0.7.3
+pydantic>=2.0
+python-dotenv
+loguru
