@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced News Processing Demo - 5 STT Models</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.8em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.3em;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            padding: 30px;
+        }
+
+        .demo-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .section {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            border-left: 5px solid #4facfe;
+        }
+
+        .section h3 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.4em;
+        }
+
+        .model-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .model-card {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .model-card:hover {
+            border-color: #4facfe;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .model-card.selected {
+            border-color: #4facfe;
+            background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+        }
+
+        .model-card.selected::after {
+            content: "✓";
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            background: #4facfe;
+            color: white;
+            border-radius: 50%;
+            width: 25px;
+            height: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .model-name {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .model-desc {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .model-stats {
+            display: flex;
+            gap: 10px;
+            font-size: 0.8em;
+        }
+
+        .stat-badge {
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-weight: 500;
+        }
+
+        .speed-fast { background: #d4edda; color: #155724; }
+        .speed-medium { background: #fff3cd; color: #856404; }
+        .speed-slow { background: #f8d7da; color: #721c24; }
+
+        .accuracy-excellent { background: #d1ecf1; color: #0c5460; }
+        .accuracy-very-good { background: #d4edda; color: #155724; }
+        .accuracy-good { background: #fff3cd; color: #856404; }
+
+        .news-articles {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #e9ecef;
+            border-radius: 10px;
+        }
+
+        .article-item {
+            padding: 15px;
+            border-bottom: 1px solid #f1f3f4;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .article-item:hover {
+            background: #f8f9fa;
+        }
+
+        .article-item:last-child {
+            border-bottom: none;
+        }
+
+        .article-title {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .article-desc {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .article-meta {
+            font-size: 0.8em;
+            color: #999;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn.success {
+            background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
+        }
+
+        .btn.processing {
+            background: linear-gradient(135deg, #ff9a56 0%, #ffad56 100%);
+        }
+
+        .processing-results {
+            background: white;
+            border-radius: 10px;
+            border: 1px solid #e9ecef;
+            margin-top: 20px;
+        }
+
+        .results-header {
+            background: #f8f9fa;
+            padding: 15px 20px;
+            border-bottom: 1px solid #e9ecef;
+            font-weight: bold;
+        }
+
+        .results-content {
+            padding: 20px;
+        }
+
+        .keypoint-result {
+            background: #f8f9fa;
+            border-left: 4px solid #4facfe;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+        }
+
+        .keypoint-text {
+            font-size: 16px;
+            line-height: 1.5;
+            margin-bottom: 10px;
+        }
+
+        .keypoint-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .keypoint-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .audio-btn {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .audio-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 10px rgba(40, 167, 69, 0.3);
+        }
+
+        .audio-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .audio-btn.playing {
+            background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%);
+        }
+
+        .audio-player {
+            margin-top: 10px;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+            display: none;
+        }
+
+        .audio-player audio {
+            width: 100%;
+            height: 30px;
+        }
+
+        .tts-status {
+            font-size: 12px;
+            color: #666;
+            margin-left: 10px;
+        }
+
+        .confidence-high { color: #28a745; font-weight: bold; }
+        .confidence-medium { color: #ffc107; font-weight: bold; }
+        .confidence-low { color: #dc3545; font-weight: bold; }
+
+        .status-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-left: 5px solid #28a745;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #dc3545;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.connected {
+            background: #28a745;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .message {
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            font-weight: 500;
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .message.info {
+            background: #cce7ff;
+            color: #004085;
+            border: 1px solid #b3d7ff;
+        }
+
+        .realtime-section {
+            grid-column: 1 / -1;
+            background: linear-gradient(135deg, #e8f5e8 0%, #f0f8ff 100%);
+            border-left: 5px solid #28a745;
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .comparison-table th,
+        .comparison-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .comparison-table th {
+            background: #f8f9fa;
+            font-weight: bold;
+        }
+
+        .comparison-table tr:hover {
+            background: #f8f9fa;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 Enhanced News Processing Demo</h1>
+            <p>Real Processing Pipeline • 5 STT Models • Live News APIs</p>
+        </div>
+
+        <div class="main-content">
+            <!-- System Status -->
+            <div class="status-section">
+                <div class="status-indicator">
+                    <div class="status-dot" id="statusDot"></div>
+                    <strong id="statusText">Checking enhanced system...</strong>
+                </div>
+                <div id="statusDetails">Connecting to enhanced backend...</div>
+            </div>
+
+            <div class="demo-grid">
+                <!-- Model Selection -->
+                <div class="section">
+                    <h3>🤖 STT Model Selection</h3>
+                    <p style="margin-bottom: 20px; color: #666;">Choose from 5 different Speech-to-Text models, each optimized for different use cases:</p>
+                    <div class="model-selector" id="modelSelector">
+                        <div class="loading">
+                            <div class="spinner"></div>
+                            <div>Loading models...</div>
+                        </div>
+                    </div>
+                    <button class="btn" onclick="compareModels()">📊 Compare Models</button>
+                </div>
+
+                <!-- News Articles -->
+                <div class="section">
+                    <h3>📰 Real News Articles</h3>
+                    <p style="margin-bottom: 15px; color: #666;">Select a news article to process with the chosen STT model:</p>
+                    <div class="news-articles" id="newsArticles">
+                        <div class="loading">
+                            <div class="spinner"></div>
+                            <div>Loading news articles...</div>
+                        </div>
+                    </div>
+                    <button class="btn" onclick="refreshNews()">🔄 Refresh News</button>
+                </div>
+
+                <!-- Real-time Processing -->
+                <div class="section realtime-section">
+                    <h3>🎵 Real-time Processing Pipeline</h3>
+                    <p style="margin-bottom: 20px; color: #666;">Start continuous processing of news articles using the selected model:</p>
+                    
+                    <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 20px;">
+                        <button class="btn success" id="startRealtimeBtn" onclick="startRealtime()">▶️ Start Real-time Processing</button>
+                        <button class="btn" id="stopRealtimeBtn" onclick="stopRealtime()" disabled>⏹️ Stop Processing</button>
+                        <span id="realtimeStatus" style="font-weight: bold; color: #666;">Ready to start</span>
+                    </div>
+
+                    <div id="realtimeInfo" style="display: none;">
+                        <div style="background: white; padding: 15px; border-radius: 8px; border: 1px solid #e9ecef;">
+                            <strong>Processing Status:</strong>
+                            <div id="processingDetails" style="margin-top: 10px; font-size: 0.9em; color: #666;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Processing Results -->
+            <div class="processing-results" id="processingResults" style="display: none;">
+                <div class="results-header">
+                    <span id="resultsTitle">Processing Results</span>
+                </div>
+                <div class="results-content" id="resultsContent">
+                    <!-- Results will be populated here -->
+                </div>
+            </div>
+
+            <!-- Latest Keypoints -->
+            <div class="section">
+                <h3>📝 Latest Generated Keypoints</h3>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <p style="color: #666;">Real-time keypoints from the processing pipeline:</p>
+                    <button class="btn" onclick="refreshKeypoints()">🔄 Refresh</button>
+                </div>
+                <div id="latestKeypoints">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <div>Loading keypoints...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="enhanced.js"></script>
+</body>
+</html>

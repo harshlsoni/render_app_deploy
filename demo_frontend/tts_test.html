@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TTS Test - News Processing</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+        }
+        
+        .test-section h3 {
+            margin-top: 0;
+            color: #007bff;
+        }
+        
+        .input-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        
+        textarea {
+            height: 80px;
+            resize: vertical;
+        }
+        
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+        }
+        
+        button:hover {
+            background: #0056b3;
+        }
+        
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        
+        audio {
+            width: 100%;
+            margin-top: 10px;
+        }
+        
+        .keypoint-item {
+            background: white;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .keypoint-text {
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        
+        .keypoint-meta {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔊 Text-to-Speech Test</h1>
+        
+        <!-- Test 1: Custom Text TTS -->
+        <div class="test-section">
+            <h3>📝 Custom Text to Speech</h3>
+            <div class="input-group">
+                <label for="customText">Enter text to convert to speech:</label>
+                <textarea id="customText" placeholder="Enter your text here (max 500 characters)...">This is a test of the text-to-speech functionality in our news processing system.</textarea>
+            </div>
+            <button onclick="generateCustomAudio()">🔊 Generate Audio</button>
+            <button onclick="clearCustomAudio()">🗑️ Clear</button>
+            <div id="customStatus"></div>
+            <audio id="customAudio" controls style="display: none;"></audio>
+        </div>
+        
+        <!-- Test 2: Keypoint TTS -->
+        <div class="test-section">
+            <h3>🔑 Keypoint Audio Generation</h3>
+            <button onclick="loadKeypoints()">📥 Load Latest Keypoints</button>
+            <div id="keypointsStatus"></div>
+            <div id="keypointsList"></div>
+        </div>
+        
+        <!-- Test 3: Backend Status -->
+        <div class="test-section">
+            <h3>🏥 Backend Status</h3>
+            <button onclick="checkBackendStatus()">🔍 Check Status</button>
+            <div id="backendStatus"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        
+        // Custom Text TTS
+        async function generateCustomAudio() {
+            const textArea = document.getElementById('customText');
+            const statusDiv = document.getElementById('customStatus');
+            const audioElement = document.getElementById('customAudio');
+            
+            const text = textArea.value.trim();
+            
+            if (!text) {
+                showStatus('customStatus', 'Please enter some text', 'error');
+                return;
+            }
+            
+            if (text.length > 500) {
+                showStatus('customStatus', 'Text too long (max 500 characters)', 'error');
+                return;
+            }
+            
+            try {
+                showStatus('customStatus', 'Generating audio...', 'info');
+                
+                const response = await fetch(`${API_BASE}/api/tts/text`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: text })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const audioBlob = await response.blob();
+                const audioUrl = URL.createObjectURL(audioBlob);
+                
+                audioElement.src = audioUrl;
+                audioElement.style.display = 'block';
+                
+                showStatus('customStatus', `Audio generated successfully! (${audioBlob.size} bytes)`, 'success');
+                
+                // Auto-play
+                audioElement.play();
+                
+            } catch (error) {
+                console.error('TTS Error:', error);
+                showStatus('customStatus', `Error: ${error.message}`, 'error');
+            }
+        }
+        
+        function clearCustomAudio() {
+            document.getElementById('customText').value = '';
+            document.getElementById('customAudio').style.display = 'none';
+            document.getElementById('customStatus').innerHTML = '';
+        }
+        
+        // Keypoint TTS
+        async function loadKeypoints() {
+            const statusDiv = document.getElementById('keypointsStatus');
+            const listDiv = document.getElementById('keypointsList');
+            
+            try {
+                showStatus('keypointsStatus', 'Loading keypoints...', 'info');
+                
+                const response = await fetch(`${API_BASE}/api/keypoints/latest?limit=5`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const keypoints = await response.json();
+                
+                if (keypoints.length === 0) {
+                    showStatus('keypointsStatus', 'No keypoints found', 'info');
+                    listDiv.innerHTML = '';
+                    return;
+                }
+                
+                showStatus('keypointsStatus', `Loaded ${keypoints.length} keypoints`, 'success');
+                
+                // Display keypoints
+                listDiv.innerHTML = keypoints.map((kp, index) => `
+                    <div class="keypoint-item">
+                        <div class="keypoint-text">${kp.keypoint_text}</div>
+                        <div class="keypoint-meta">
+                            ID: ${kp.id} | Model: ${kp.segment?.model_used || 'unknown'} | 
+                            Confidence: ${Math.round((kp.confidence_score || 0) * 100)}%
+                        </div>
+                        <button onclick="generateKeypointAudio('${kp.id}', ${index})">🔊 Generate Audio</button>
+                        <div id="kp-status-${index}"></div>
+                        <audio id="kp-audio-${index}" controls style="display: none;"></audio>
+                    </div>
+                `).join('');
+                
+            } catch (error) {
+                console.error('Load Keypoints Error:', error);
+                showStatus('keypointsStatus', `Error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function generateKeypointAudio(keypointId, index) {
+            const statusId = `kp-status-${index}`;
+            const audioId = `kp-audio-${index}`;
+            
+            try {
+                showStatus(statusId, 'Generating audio...', 'info');
+                
+                const response = await fetch(`${API_BASE}/api/tts/keypoint/${keypointId}`, {
+                    method: 'POST'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const audioBlob = await response.blob();
+                const audioUrl = URL.createObjectURL(audioBlob);
+                
+                const audioElement = document.getElementById(audioId);
+                audioElement.src = audioUrl;
+                audioElement.style.display = 'block';
+                
+                showStatus(statusId, `Audio generated! (${audioBlob.size} bytes)`, 'success');
+                
+                // Auto-play
+                audioElement.play();
+                
+            } catch (error) {
+                console.error('Keypoint TTS Error:', error);
+                showStatus(statusId, `Error: ${error.message}`, 'error');
+            }
+        }
+        
+        // Backend Status
+        async function checkBackendStatus() {
+            const statusDiv = document.getElementById('backendStatus');
+            
+            try {
+                showStatus('backendStatus', 'Checking backend...', 'info');
+                
+                const response = await fetch(`${API_BASE}/health`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const status = await response.json();
+                
+                const statusHtml = `
+                    <div style="background: white; padding: 15px; border-radius: 5px; margin-top: 10px;">
+                        <strong>Status:</strong> ${status.status}<br>
+                        <strong>Mode:</strong> ${status.mode || 'unknown'}<br>
+                        <strong>Database:</strong> ${status.services?.database || 'unknown'}<br>
+                        <strong>HuggingFace:</strong> ${status.services?.huggingface || 'unknown'}<br>
+                        <strong>Timestamp:</strong> ${new Date(status.timestamp).toLocaleString()}
+                    </div>
+                `;
+                
+                document.getElementById('backendStatus').innerHTML = 
+                    '<div class="status success">Backend is healthy!</div>' + statusHtml;
+                
+            } catch (error) {
+                console.error('Backend Status Error:', error);
+                showStatus('backendStatus', `Backend Error: ${error.message}`, 'error');
+            }
+        }
+        
+        // Utility function
+        function showStatus(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+        
+        // Auto-check backend status on load
+        window.addEventListener('load', () => {
+            checkBackendStatus();
+        });
+    </script>
+</body>
+</html>
