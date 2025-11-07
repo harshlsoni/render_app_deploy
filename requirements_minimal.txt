@@ -1,0 +1,6 @@
+# Minimal dependencies - guaranteed to work on Render
+fastapi
+uvicorn[standard]
+pydantic>=2.0
+python-dotenv
+loguru
